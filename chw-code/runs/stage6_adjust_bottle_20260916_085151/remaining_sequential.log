@@ -1,0 +1,89 @@
+[stage6] skip wan21_vace_1_3b: already have 32/32 records
+[stage6] start server cosmos25 gpu=2 port=8848
+[stage6] server ready cosmos25; running 32 episode(s)
+Terminated
+[stage6] skip wan21_vace_1_3b: already have 32/32 records
+[stage6] start server cosmos25 gpu=2 port=8848
+[stage6] server ready cosmos25; running 25 episode(s)
+[stage6] finished cosmos25: 32/32
+[stage6] start server cosmos3 gpu=2 port=8848
+[stage6] server ready cosmos3; running 32 episode(s)
+[stage6] skip wan21_vace_1_3b: already have 32/32 records
+[stage6] skip cosmos25: already have 32/32 records
+[stage6] start server cosmos3 gpu=2 port=8848
+[stage6] server ready cosmos3; running 29 episode(s)
+[stage6] skip wan21_vace_1_3b: already have 32/32 records
+[stage6] skip cosmos25: already have 32/32 records
+[stage6] start server cosmos3 gpu=2 port=8848
+[stage6] server ready cosmos3; running 29 episode(s)
+[stage6] finished cosmos3: 32/32
+[stage6] start server wan22_ti2v_5b gpu=2 port=8848
+[stage6] server ready wan22_ti2v_5b; running 32 episode(s)
+[stage6] finished wan22_ti2v_5b: 32/32
+[stage6] start server wan21_i2v_14b gpu=2 port=8848
+[stage6] server ready wan21_i2v_14b; running 32 episode(s)
+[stage6] finished wan21_i2v_14b: 32/32
+[
+  {
+    "backbone": "cosmos25",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "cosmos3",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "wan21_i2v_14b",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "wan21_vace_1_3b",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "wan22_ti2v_5b",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 0.96875,
+    "successes": 31
+  }
+]
+wrote /home/chw/code/packages/OpenWAM/chw-code/runs/stage6_adjust_bottle_20260916_085151/passk_summary.json
+wrote /home/chw/code/packages/OpenWAM/chw-code/runs/stage6_adjust_bottle_20260916_085151/passk_summary.csv

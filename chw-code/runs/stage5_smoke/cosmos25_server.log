@@ -1,0 +1,9 @@
+2026-09-16 09:10:34,038 [INFO] openwam.model.action_backbone.components: Using attention backend: sdpa (auto-detected)
+2026-09-16 09:10:34,038 [INFO] deploy: Attention backend diagnostics:
+  ActionDiT          : _sdpa
+  Video DiT          : torch_sdpa
+  Wan shared core    : torch
+2026-09-16 09:10:34,150 [INFO] openwam.deploy.model_loader: Loading checkpoint: /mnt/data/chw/model/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_cosmos25/checkpoint_step_9890.safetensors
+2026-09-16 09:10:34,152 [INFO] openwam.deploy.model_loader: Using config-embedded component specs for video-backbone construction
+2026-09-16 09:10:34,153 [INFO] openwam.deploy.model_loader: Using self-contained Reason1 artifacts from /mnt/data/chw/model/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_cosmos25/reason1 (clearing external text_encoder_path='/path/to/Cosmos-Reason1-7B')
+2026-09-16 09:10:34,344 [INFO] megatron.core.msc_utils: The multistorageclient package is available.

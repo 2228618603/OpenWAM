@@ -1,0 +1,1 @@
+{"ckpt_setting": "stage5_wan21_i2v_14b", "episode_id": 0, "policy_name": "openwam2robotwin_interface", "seed": 100001, "success": true, "task_config": "demo_clean", "task_name": "adjust_bottle"}

@@ -1,0 +1,62 @@
+[
+  {
+    "backbone": "cosmos25",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "cosmos3",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "wan21_i2v_14b",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "wan21_vace_1_3b",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 1.0,
+    "successes": 32
+  },
+  {
+    "backbone": "wan22_ti2v_5b",
+    "episodes": 32,
+    "success@1": 1,
+    "success@16": 1,
+    "success@2": 1,
+    "success@32": 1,
+    "success@4": 1,
+    "success@8": 1,
+    "success_rate": 0.96875,
+    "successes": 31
+  }
+]

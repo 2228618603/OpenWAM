@@ -1,0 +1,147 @@
+2026-09-16 09:37:28,206 [INFO] openwam.model.action_backbone.components: Using attention backend: sdpa (auto-detected)
+2026-09-16 09:37:28,207 [INFO] deploy: Attention backend diagnostics:
+  ActionDiT          : _sdpa
+  Video DiT          : torch_sdpa
+  Wan shared core    : torch
+2026-09-16 09:37:28,291 [INFO] openwam.deploy.model_loader: Loading checkpoint: /mnt/data/chw/model/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_wan21_vace_1_3b/checkpoint_step_9890.safetensors
+2026-09-16 09:37:28,292 [INFO] openwam.deploy.model_loader: Using config-embedded component specs for video-backbone construction
+2026-09-16 09:37:28,293 [INFO] openwam.model.video_backbone.wan.loader: Instantiating openwam.model.video_backbone.wan.models.dit.WanModel as holder.dit (extra_kwargs keys=['has_image_input', 'patch_size', 'in_dim', 'dim', 'ffn_dim', 'freq_dim', 'text_dim', 'out_dim', 'num_heads', 'num_layers', 'eps'])
+2026-09-16 09:37:38,001 [INFO] openwam.model.video_backbone.wan.loader: Instantiating openwam.model.video_backbone.wan.models.vace.VaceWanModel as holder.vace (extra_kwargs keys=[])
+2026-09-16 09:37:43,284 [INFO] openwam.model.video_backbone.wan.loader: Instantiating openwam.model.video_backbone.wan.models.vae.WanVideoVAE as holder.vae (extra_kwargs keys=[])
+2026-09-16 09:37:44,654 [INFO] openwam.model.video_backbone.wan.loader: Instantiating openwam.model.video_backbone.wan.models.text_encoder.WanTextEncoder as holder.text_encoder (extra_kwargs keys=[])
+2026-09-16 09:38:36,616 [INFO] openwam.deploy.model_loader: Architecture: dual_system_self_attn (framework=dual_system variant=joint_self_attn)
+2026-09-16 09:38:47,916 [INFO] openwam.deploy.model_loader: Loading all models with dtype=torch.bfloat16 (mixed_precision=bf16)
+2026-09-16 09:38:52,674 [INFO] openwam.deploy.model_loader: [normalizer] Resolving deployment action normalizer from checkpoint dir: /mnt/data/chw/model/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_wan21_vace_1_3b
+2026-09-16 09:38:52,674 [INFO] openwam.deploy.model_loader: [normalizer] Saved config: normalize_mode=min-max, action_mode=eef
+2026-09-16 09:38:52,678 [INFO] openwam.deploy.model_loader: [normalizer] Found pre-computed stats file: /mnt/data/chw/model/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_wan21_vace_1_3b/normalization_stats.npy (exists ✓)
+2026-09-16 09:38:52,950 [INFO] openwam.deploy.model_loader: [normalizer] Active: mode=min-max action_mode=eef dim=20 stats=/mnt/data/chw/model/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_wan21_vace_1_3b/normalization_stats.npy
+2026-09-16 09:38:52,950 [INFO] openwam.deploy.model_loader: Model loaded successfully on cuda:0
+2026-09-16 09:38:52,966 [INFO] openwam.deploy.engine: DiT velocity cache enabled (threshold=0.990)
+2026-09-16 09:38:52,967 [INFO] deploy: Inference engine ready — steps=10 denoise_mode=sync
+2026-09-16 09:38:52,969 [INFO] openwam.deploy.server: [obs] View config: multiview=True, camera_layout=['head_camera', 'left_camera', 'right_camera'], canvas=384x320
+2026-09-16 09:38:52,969 [INFO] openwam.deploy.server: Starting PolicyServer: ws://0.0.0.0:8848
+2026-09-16 09:38:52,979 [INFO] websockets.server: server listening on 0.0.0.0:8848
+2026-09-16 09:38:52,979 [INFO] openwam.deploy.server: WebSocket server started on ws://0.0.0.0:8848
+2026-09-16 09:40:22,613 [INFO] websockets.server: connection open
+2026-09-16 09:40:22,614 [INFO] openwam.deploy.server: Client connected: ('127.0.0.1', 53042)
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  33%|███▎      | 1/3 [00:00<00:00,  4.17it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00,  7.48it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00,  6.93it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.43it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.62it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  10%|█         | 1/10 [00:01<00:09,  1.01s/it]Joint denoising:  60%|██████    | 6/10 [00:01<00:00,  6.60it/s]Joint denoising: 100%|██████████| 10/10 [00:01<00:00,  8.08it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.31it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.54it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.04it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.75it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 12.13it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.19it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 32.32it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.24it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.92it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.14it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.74it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.23it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 38.88it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 34.81it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.77it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.51it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.32it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.50it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 12.31it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.49it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.37it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.60it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.40it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.33it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.00it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.03it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.43it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.54it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.99it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.65it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.09it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.64it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.28it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.62it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.77it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.25it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 13.87it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.59it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.75it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.35it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 40.46it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.45it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.87it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.61it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.45it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.05it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.39it/s]Joint denoising:  70%|███████   | 7/10 [00:00<00:00, 27.19it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.97it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.20it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.85it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.95it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.68it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.24it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 40.19it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.20it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.20it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.82it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.95it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.51it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.32it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.84it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.97it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.00it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 13.88it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.25it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.75it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.26it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.35it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.57it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.18it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.47it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.13it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.37it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.92it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.29it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.85it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.68it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.82it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.36it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.86it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.25it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.46it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.65it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 15.68it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.77it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.32it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 13.91it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.88it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.30it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.38it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.22it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.36it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 12.55it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 13.27it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.29it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.66it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.81it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 16.19it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 17.87it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 18.78it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 18.75it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.07it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.20it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.38it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.09it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.75it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.64it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.14it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 12.63it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.83it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.76it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.30it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.97it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.84it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.99it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.14it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 38.09it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 34.55it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.05it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.73it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.84it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.47it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.32it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.03it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.79it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.26it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.84it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 12.88it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 12.54it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.94it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.29it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.86it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.38it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.91it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.59it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.11it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.23it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.04it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.32it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.82it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.24it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.83it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 13.94it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.33it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 40.15it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.21it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.39it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.95it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.97it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.08it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.26it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 38.93it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.24it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.19it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.98it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.46it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.03it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.36it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.88it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.01it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.68it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.19it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.53it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.28it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.36it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 38.95it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 34.91it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.57it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.46it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.58it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.20it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.02it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.81it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.83it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.27it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.92it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.53it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.15it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.34it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 40.40it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.41it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.48it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.09it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.46it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.11it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.98it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.31it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.89it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 18.91it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 22.40it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 15.43it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.54it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.38it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 38.47it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 34.56it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.43it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.22it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.58it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.21it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.18it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.03it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.28it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.24it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.89it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.48it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.10it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.31it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 40.04it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.12it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.37it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.99it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.99it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.12it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.27it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.89it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.98it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.32it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.57it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.89it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.33it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.19it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.19it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.09it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.56it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.19it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.83it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.94it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  10%|█         | 1/10 [00:00<00:01,  8.04it/s]Joint denoising:  60%|██████    | 6/10 [00:00<00:00, 24.23it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 28.87it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.80it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.65it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.61it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.18it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.33it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 38.62it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.03it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.49it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 16.94it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 19.06it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 19.04it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.24it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.72it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.84it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.83it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 16.83it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 18.80it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 18.96it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.10it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 39.88it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 35.92it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.74it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.53it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.44it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.04it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.18it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 36.72it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.50it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 14.35it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.95it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 15.28it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 15.65it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 13.05it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 37.21it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 33.48it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 13.76it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 14.38it/s]
+VAE encoding:   0%|          | 0/3 [00:00<?, ?it/s]VAE encoding:  67%|██████▋   | 2/3 [00:00<00:00, 12.91it/s]VAE encoding: 100%|██████████| 3/3 [00:00<00:00, 13.86it/s]
+Joint denoising:   0%|          | 0/10 [00:00<?, ?it/s]Joint denoising:  20%|██        | 2/10 [00:00<00:00, 14.09it/s]Joint denoising:  60%|██████    | 6/10 [00:00<00:00, 26.03it/s]Joint denoising: 100%|██████████| 10/10 [00:00<00:00, 31.00it/s]
+2026-09-16 09:59:11,300 [INFO] openwam.deploy.server: Client disconnected

@@ -1,0 +1,6 @@
+backbone,episodes,successes,success_rate,success@1,success@2,success@4,success@8,success@16,success@32
+cosmos25,32,32,1.0,1,1,1,1,1,1
+cosmos3,32,32,1.0,1,1,1,1,1,1
+wan21_i2v_14b,32,32,1.0,1,1,1,1,1,1
+wan21_vace_1_3b,32,32,1.0,1,1,1,1,1,1
+wan22_ti2v_5b,32,31,0.96875,1,1,1,1,1,1

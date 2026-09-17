@@ -1,0 +1,3 @@
+{"ckpt_setting": "stage6_cosmos3", "episode_id": 0, "policy_name": "openwam2robotwin_interface", "seed": 100001, "success": true, "task_config": "demo_clean", "task_name": "adjust_bottle"}
+{"ckpt_setting": "stage6_cosmos3", "episode_id": 1, "policy_name": "openwam2robotwin_interface", "seed": 100002, "success": true, "task_config": "demo_clean", "task_name": "adjust_bottle"}
+{"ckpt_setting": "stage6_cosmos3", "episode_id": 2, "policy_name": "openwam2robotwin_interface", "seed": 100005, "success": true, "task_config": "demo_clean", "task_name": "adjust_bottle"}

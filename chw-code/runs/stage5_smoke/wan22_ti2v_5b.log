@@ -1,0 +1,34 @@
+[INFO] SAPIEN EGL ICD: /home/chw/miniconda3/envs/RoboTwin/lib/python3.10/site-packages/sapien/vulkan_library/10_nvidia.json
+task_name    : adjust_bottle
+task_config  : demo_clean
+ckpt_setting : stage5_wan22_ti2v_5b
+server       : ws://127.0.0.1:8851
+gpu          : 7
+seed         : 0
+[eval_policy_wrapper] RoboTwin version check skipped; eval_policy.py sha256=9779560bfb8574a9
+[eval_policy_wrapper] prewarmed CUDA/Curobo before SAPIEN import
+[chw] preloaded patched sapien.wrapper.urdf_loader from /home/chw/miniconda3/envs/RoboTwin/lib/python3.10/site-packages/sapien/wrapper/urdf_loader.py
+============= Config =============
+
+[95mMessy Table:[0m False
+[95mRandom Background:[0m False
+[95mRandom Light:[0m False
+[95mRandom Table Height:[0m 0
+[95mRandom Head Camera Distance:[0m 0
+[94mHead Camera Config:[0m D435, True
+[94mWrist Camera Config:[0m D435, True
+[94mEmbodiment Config:[0m aloha-agilex
+
+==================================
+missing pytorch3d
+[OpenWAMClient] server=ws://127.0.0.1:8851 send_state=True state_dim=20 request_timeout=300s action_type=ee action_indices=None debug=False debug_dir=./debug_images
+[OpenWAMClient] Server healthy at ws://127.0.0.1:8851
+[eval_policy_wrapper] overriding RoboTwin eval test_num=1
+[34mTask Name: adjust_bottle[0m
+[34mPolicy Name: openwam2robotwin_interface[0m
+Warp DeprecationWarning: The symbol `warp.torch.device_from_torch` will soon be removed from the public API. Use `warp.device_from_torch` instead.
+[92mSuccess![0m
+[93madjust_bottle[0m | [94mopenwam2robotwin_interface[0m | [92mdemo_clean[0m | [91mstage5_wan22_ti2v_5b[0m
+Success rate: [96m1/1[0m => [95m100.0%[0m, current seed: [90m100001[0m
+
+Data has been saved to eval_result/adjust_bottle/openwam2robotwin_interface/demo_clean/stage5_wan22_ti2v_5b/20260916_083225/_result_clean.txt
