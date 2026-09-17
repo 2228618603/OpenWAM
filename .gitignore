@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+
+/chw-code/robotwin_legacy_compat/result/
+/chw-code/robotwin_legacy_compat/chw-choose-sample/
+/chw-code/robotwin_legacy_compat/chw-choose-sample.cleared_*/
