@@ -222,34 +222,69 @@ def run_job_workers(
     stop_on_error: bool,
     target_n: int,
     worker_offset: int,
+    retry_incomplete_rounds: int,
 ) -> None:
-    q: "queue.Queue[tuple[str, str]]" = queue.Queue()
-    for job in jobs_to_run:
-        q.put(job)
-
     ports = [base_port + i for i in range(len(gpu_slots))]
-    threads = []
-    for i, (gpu, port) in enumerate(zip(gpu_slots, ports)):
-        t = threading.Thread(
-            target=worker_loop,
-            args=(worker_offset + i, gpu, port, run_root, q, stop_on_error, target_n),
-            daemon=False,
-        )
-        t.start()
-        threads.append(t)
+    rounds = 0
+    while True:
+        incomplete = [
+            (backbone, task)
+            for backbone, task in jobs_to_run
+            if count_records(run_root, backbone, task) < target_n
+        ]
+        if not incomplete:
+            summarize_status(run_root, target_n)
+            return
+        if rounds >= retry_incomplete_rounds:
+            missing = ", ".join(
+                f"{backbone}__{task}:{count_records(run_root, backbone, task)}/{target_n}"
+                for backbone, task in incomplete
+            )
+            raise RuntimeError(f"incomplete jobs after {rounds} rounds: {missing}")
 
-    while any(t.is_alive() for t in threads):
-        status = summarize_status(run_root, target_n)
+        rounds += 1
         print(
-            f"[monitor] {datetime.now().isoformat(timespec='seconds')} "
-            f"{status['done_jobs']}/{status['total_jobs']} jobs complete",
+            f"[round] {datetime.now().isoformat(timespec='seconds')} "
+            f"round={rounds}/{retry_incomplete_rounds} incomplete_jobs={len(incomplete)}",
             flush=True,
         )
-        time.sleep(60)
 
-    for t in threads:
-        t.join()
-    summarize_status(run_root, target_n)
+        q: "queue.Queue[tuple[str, str]]" = queue.Queue()
+        for job in incomplete:
+            q.put(job)
+
+        threads = []
+        for i, (gpu, port) in enumerate(zip(gpu_slots, ports)):
+            t = threading.Thread(
+                target=worker_loop,
+                args=(worker_offset + i, gpu, port, run_root, q, stop_on_error, target_n),
+                daemon=False,
+            )
+            t.start()
+            threads.append(t)
+
+        while any(t.is_alive() for t in threads):
+            status = summarize_status(run_root, target_n)
+            print(
+                f"[monitor] {datetime.now().isoformat(timespec='seconds')} "
+                f"{status['done_jobs']}/{status['total_jobs']} jobs complete",
+                flush=True,
+            )
+            time.sleep(60)
+
+        for t in threads:
+            t.join()
+
+        summarize_status(run_root, target_n)
+        remaining = sum(
+            count_records(run_root, backbone, task) < target_n
+            for backbone, task in jobs_to_run
+        )
+        print(
+            f"[round] {datetime.now().isoformat(timespec='seconds')} "
+            f"round={rounds} complete remaining_jobs={remaining}",
+            flush=True,
+        )
 
 
 def worker_loop(
@@ -305,6 +340,7 @@ def main() -> int:
     )
     parser.add_argument("--base-port", type=int, default=9100)
     parser.add_argument("--target-n", type=int, default=32)
+    parser.add_argument("--retry-incomplete-rounds", type=int, default=20)
     parser.add_argument("--stop-on-error", action="store_true")
     parser.add_argument(
         "--phase-by-backbone",
@@ -349,6 +385,7 @@ def main() -> int:
                 stop_on_error=args.stop_on_error,
                 target_n=args.target_n,
                 worker_offset=phase_idx * 100,
+                retry_incomplete_rounds=args.retry_incomplete_rounds,
             )
     else:
         jobs = [(backbone, task) for backbone in CKPTS for task in TASKS]
@@ -360,6 +397,7 @@ def main() -> int:
             stop_on_error=args.stop_on_error,
             target_n=args.target_n,
             worker_offset=0,
+            retry_incomplete_rounds=args.retry_incomplete_rounds,
         )
     print("[stage9] summarizing pass@k", flush=True)
     run_stage9_summary(run_root)
