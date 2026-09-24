@@ -1,0 +1,8 @@
+put_bottles_dustbin
+open_microwave
+stack_blocks_three
+stack_bowls_three
+blocks_ranking_rgb
+hanging_mug
+put_object_cabinet
+handover_block

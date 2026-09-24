@@ -1,0 +1,7 @@
+{
+  "wan21_vace_1_3b": "/path/to/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_wan21_vace_1_3b",
+  "cosmos25": "/path/to/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_cosmos25",
+  "cosmos3": "/path/to/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_cosmos3",
+  "wan22_ti2v_5b": "/path/to/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention",
+  "wan21_i2v_14b": "/path/to/openwam_ckpt/openwam_study/video_backbone/robotwin_dual_system_joint_self_attention_wan21_i2v_14b"
+}
