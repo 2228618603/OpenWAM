@@ -61,6 +61,10 @@ training:
   # --- Data loading ---
   dataset_num_workers: 8          # DataLoader num_workers (0 = main process)
 
+  # --- Offline text embedding cache (Wan/T5) ---
+  use_cached_text_embeddings: false
+  text_embedding_cache_dir: null
+
 project:
   name: openwam
   output_dir: outputs/${now:%Y-%m-%d_%H-%M-%S}

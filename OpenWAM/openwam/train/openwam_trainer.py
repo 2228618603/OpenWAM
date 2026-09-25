@@ -25,9 +25,11 @@ import itertools
 import logging
 import math
 import os
+import sys
+import traceback
 
 import torch
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from openwam.train.utils.checkpointing import (
     compute_resume_position,
@@ -53,6 +55,32 @@ from openwam.train.utils.training_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _diag_bool_env(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _tensor_summary(tensor: torch.Tensor) -> str:
+    return f"Tensor(shape={tuple(tensor.shape)}, dtype={tensor.dtype}, device={tensor.device})"
+
+
+def _value_summary(value, depth: int = 0) -> str:
+    if depth >= 3:
+        return type(value).__name__
+    if torch.is_tensor(value):
+        return _tensor_summary(value)
+    if isinstance(value, dict):
+        items = list(value.items())[:16]
+        body = ", ".join(f"{key!r}: {_value_summary(val, depth + 1)}" for key, val in items)
+        extra = ", ..." if len(value) > len(items) else ""
+        return "{" + body + extra + "}"
+    if isinstance(value, (list, tuple)):
+        items = list(value)[:8]
+        body = ", ".join(_value_summary(item, depth + 1) for item in items)
+        extra = ", ..." if len(value) > len(items) else ""
+        return f"{type(value).__name__}([" + body + extra + "])"
+    return repr(value)
 
 
 class OpenWAMTrainer:
@@ -86,6 +114,12 @@ class OpenWAMTrainer:
 
         t = cfg.training
         m = cfg.model
+        if bool(cfg_get(t, "use_cached_text_embeddings", False)):
+            cache_dir = cfg_get(t, "text_embedding_cache_dir", None)
+            if not cache_dir:
+                raise ValueError("training.use_cached_text_embeddings=true requires training.text_embedding_cache_dir.")
+            OmegaConf.update(m, "video_backbone.use_cached_text_embeddings", True, force_add=True)
+            OmegaConf.update(m, "video_backbone.text_embedding_cache_dir", str(cache_dir), force_add=True)
 
         # Build architecture (creates video_backbone internally from config).
         from openwam.model import build_architecture, resolve_architecture_config
@@ -156,6 +190,8 @@ class OpenWAMTrainer:
         # Loss weights from the training config
         self.lambda_video = float(t.lambda_video)
         self.lambda_action = float(t.lambda_action)
+        self._step_diag_enabled = _diag_bool_env("OPENWAM_STEP_DIAG")
+        self._step_diag_every = max(1, int(os.environ.get("OPENWAM_STEP_DIAG_EVERY", "10")))
 
         # Push forward-time training flags onto the architecture so prepare_inputs
         # is self-contained.
@@ -170,6 +206,44 @@ class OpenWAMTrainer:
 
         is_main = self.accelerator is None or self.accelerator.is_main_process
         log_parameter_counts(self.architecture, is_main=is_main)
+
+    def _cuda_diag(self) -> str:
+        if not torch.cuda.is_available():
+            return "cuda=unavailable"
+        device = torch.cuda.current_device()
+        allocated = torch.cuda.memory_allocated(device) / (1024**3)
+        reserved = torch.cuda.memory_reserved(device) / (1024**3)
+        max_allocated = torch.cuda.max_memory_allocated(device) / (1024**3)
+        max_reserved = torch.cuda.max_memory_reserved(device) / (1024**3)
+        return (
+            f"cuda:{device} allocated={allocated:.2f}GiB reserved={reserved:.2f}GiB "
+            f"max_allocated={max_allocated:.2f}GiB max_reserved={max_reserved:.2f}GiB"
+        )
+
+    def _emit_step_diag(self, *, step: int, phase: str, batch=None, exc: BaseException | None = None) -> None:
+        if not self._step_diag_enabled and exc is None:
+            return
+        should_log = exc is not None or step <= 5 or step % self._step_diag_every == 0
+        if not should_log:
+            return
+        rank = os.environ.get("RANK", "?")
+        local_rank = os.environ.get("LOCAL_RANK", "?")
+        message = (
+            f"[openwam_step_diag] rank={rank} local_rank={local_rank} pid={os.getpid()} "
+            f"step={step} phase={phase} {self._cuda_diag()}"
+        )
+        sys.stderr.write(message + "\n")
+        sys.stderr.flush()
+        if batch is not None and (exc is not None or step <= 5):
+            sys.stderr.write(f"[openwam_step_diag] rank={rank} step={step} batch={_value_summary(batch)}\n")
+            sys.stderr.flush()
+        if exc is not None:
+            sys.stderr.write(
+                f"[openwam_step_diag] rank={rank} step={step} exception={type(exc).__module__}.{type(exc).__name__}: {exc!r}",
+            )
+            sys.stderr.write("\n")
+            sys.stderr.flush()
+            traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
 
     # (2) Driver — build optimizer/dataloader/scheduler -> setup dir -> accelerate prepare
     #     -> (resume) -> epoch/step loop{compute_loss -> log_step -> save} -> finish_training.
@@ -313,30 +387,48 @@ class OpenWAMTrainer:
             else:
                 epoch_iter = dataloader
             for batch in epoch_iter:
-                if self._run_seed is not None:
-                    step_seed = per_step_seed(self._run_seed, rank=self._rank, step=global_step)
-                    torch.manual_seed(step_seed)
-                    if torch.cuda.is_available():
-                        torch.cuda.manual_seed_all(step_seed)
-                with self.accelerator.accumulate(self.architecture):
-                    losses = self.compute_loss(batch)
-                    loss = losses["total"]
-                    self.accelerator.backward(loss)
+                step_for_diag = global_step + 1
+                phase = "step_start"
+                if self._step_diag_enabled and torch.cuda.is_available():
+                    torch.cuda.reset_peak_memory_stats()
+                try:
+                    self._emit_step_diag(step=step_for_diag, phase=phase, batch=batch)
+                    phase = "seed"
+                    if self._run_seed is not None:
+                        step_seed = per_step_seed(self._run_seed, rank=self._rank, step=global_step)
+                        torch.manual_seed(step_seed)
+                        if torch.cuda.is_available():
+                            torch.cuda.manual_seed_all(step_seed)
+                    with self.accelerator.accumulate(self.architecture):
+                        phase = "compute_loss"
+                        losses = self.compute_loss(batch)
+                        loss = losses["total"]
+                        phase = "backward"
+                        self.accelerator.backward(loss)
 
-                    grad_norm = torch.tensor(0.0, device=loss.device)
-                    if self.accelerator.sync_gradients:
-                        if max_grad_norm is not None:
-                            grad_norm_val = self.accelerator.clip_grad_norm_(all_params, max_grad_norm)
-                            grad_norm = torch.tensor(float(grad_norm_val), device=loss.device)
-                        optimizer.step()
-                        if scheduler is not None:
-                            scheduler.step()
-                        optimizer.zero_grad()
-                        opt_step += 1
+                        grad_norm = torch.tensor(0.0, device=loss.device)
+                        if self.accelerator.sync_gradients:
+                            phase = "clip_grad_norm"
+                            if max_grad_norm is not None:
+                                grad_norm_val = self.accelerator.clip_grad_norm_(all_params, max_grad_norm)
+                                grad_norm = torch.tensor(float(grad_norm_val), device=loss.device)
+                            phase = "optimizer_step"
+                            optimizer.step()
+                            if scheduler is not None:
+                                phase = "scheduler_step"
+                                scheduler.step()
+                            phase = "optimizer_zero_grad"
+                            optimizer.zero_grad()
+                            opt_step += 1
 
-                global_step += 1
+                    global_step += 1
 
-                metrics = reduce_step_metrics(self.accelerator, losses, grad_norm)
+                    phase = "reduce_step_metrics"
+                    metrics = reduce_step_metrics(self.accelerator, losses, grad_norm)
+                    self._emit_step_diag(step=global_step, phase="step_done")
+                except BaseException as exc:
+                    self._emit_step_diag(step=step_for_diag, phase=f"EXCEPTION:{phase}", batch=batch, exc=exc)
+                    raise
 
                 current_lr = optimizer.param_groups[0]["lr"]
                 _now = _time.monotonic()

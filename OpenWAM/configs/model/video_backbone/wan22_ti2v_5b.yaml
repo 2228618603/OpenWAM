@@ -10,3 +10,6 @@ model_path: /mnt/data/chw/model/openwam/Wan2.2-TI2V-5B  # [Required] weights dir
 
 from_scratch: false   # true = re-init the DiT from scratch (VAE/text encoder still load + freeze)
 shift_video: 5.0      # flow-matching α-shift for the video scheduler (train + deploy single source of truth)
+load_text_encoder: true  # false requires training.use_cached_text_embeddings=true
+use_cached_text_embeddings: false
+text_embedding_cache_dir: null

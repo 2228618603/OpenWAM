@@ -115,30 +115,19 @@ def init_wandb(cfg):
 
 
 def reduce_step_metrics(accelerator, losses: dict, grad_norm) -> dict:
-    """Reduce loss/grad_norm across ranks (mean); single-process fast path."""
+    """Return local loss/grad_norm scalars without a per-step collective.
+
+    Training synchronization already happens in backward/optimizer steps. Logging
+    a cross-rank mean every step adds another collective on the critical path and
+    can mask the real failure as an NCCL timeout if any rank lags. The main rank
+    logs its local metrics; use a low-frequency explicit reduction if exact
+    global logging is needed later.
+    """
     loss = losses["total"]
 
     def _f(v):
         return v.item() if isinstance(v, torch.Tensor) else float(v)
 
-    if accelerator is not None and accelerator.num_processes > 1:
-        local = torch.tensor(
-            [
-                loss.detach().float().item(),
-                _f(losses["video"]),
-                _f(losses["action"]),
-                grad_norm.item(),
-            ],
-            device=loss.device,
-            dtype=torch.float32,
-        ).reshape(1, -1)
-        g = accelerator.gather(local).mean(dim=0)
-        return {
-            "loss_total": g[0].item(),
-            "loss_video": g[1].item(),
-            "loss_action": g[2].item(),
-            "grad_norm": g[3].item(),
-        }
     return {
         "loss_total": loss.detach().item(),
         "loss_video": _f(losses["video"]),

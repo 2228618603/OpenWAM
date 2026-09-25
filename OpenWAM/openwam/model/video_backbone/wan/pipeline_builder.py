@@ -161,7 +161,25 @@ def _filter_native_vae_configs(model_configs):
     return kept
 
 
-def build_training_pipeline(cfg: DictConfig, *, skip_native_vae: bool = False):
+def _filter_text_encoder_configs(model_configs):
+    """Drop Wan T5 text encoder weights when cached embeddings replace it."""
+    kept = []
+    for c in model_configs:
+        candidates = []
+        if isinstance(c.path, list):
+            candidates.extend(str(p) for p in c.path if p)
+        elif c.path is not None:
+            candidates.append(str(c.path))
+        if c.origin_file_pattern is not None:
+            candidates.append(str(c.origin_file_pattern))
+        lower = " ".join(os.path.basename(s).lower() for s in candidates)
+        if "t5" in lower or "umt5" in lower or "text_encoder" in lower:
+            continue
+        kept.append(c)
+    return kept
+
+
+def build_training_pipeline(cfg: DictConfig, *, skip_native_vae: bool = False, skip_text_encoder: bool = False):
     """Build WanVideoPipeline from Hydra config.
 
     Auto-discovers model files in the directory specified by
@@ -193,6 +211,8 @@ def build_training_pipeline(cfg: DictConfig, *, skip_native_vae: bool = False):
     model_configs, tokenizer_config = discover_model_files(model_dir)
     if skip_native_vae:
         model_configs = _filter_native_vae_configs(model_configs)
+    if skip_text_encoder:
+        model_configs = _filter_text_encoder_configs(model_configs)
 
     # Load components
     pipe = load_wan_components(

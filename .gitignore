@@ -1,6 +1,12 @@
 __pycache__/
 *.py[cod]
 
+outputs/
+train-on-robotwin/runs/
+train-on-robotwin/code/audit/tmux_logs/
+train-on-robotwin/code/audit/rank_logs/
+train-on-robotwin/code/audit/error_logs/
+
 /chw-code/robotwin_legacy_compat/result/
 /chw-code/robotwin_legacy_compat/chw-choose-sample/
 /chw-code/robotwin_legacy_compat/chw-choose-sample.cleared_*/

@@ -41,6 +41,7 @@ from openwam.model.video_backbone.wan.preprocess import (
     check_resize_height_width,
 )
 from openwam.model.video_backbone.wan.shared.core.gradient.gradient_checkpoint import gradient_checkpoint_forward
+from openwam.model.video_backbone.wan.text_embedding_cache import TextEmbeddingCache
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,15 @@ class WanBase(VideoBackbone):
     # Construction
     # ================================================================
 
-    def __init__(self, holder, *, external_encoder=None, shift_video=None, text_dim: Optional[int] = None):
+    def __init__(
+        self,
+        holder,
+        *,
+        external_encoder=None,
+        shift_video=None,
+        text_dim: Optional[int] = None,
+        text_embedding_cache_dir: Optional[str] = None,
+    ):
         """Internal constructor. Use a subclass ``from_pretrained()`` instead.
 
         ``external_encoder`` is ``None`` on the native VAE path so ``state_dict()``
@@ -114,6 +123,9 @@ class WanBase(VideoBackbone):
         self._wan_blocks_compile_enabled = False
         self._wan_blocks_compile_kwargs: dict | None = None
         self._compiled_wan_blocks: dict[int, Callable[..., Tensor]] = {}
+        self._text_embedding_cache = TextEmbeddingCache(text_embedding_cache_dir) if text_embedding_cache_dir else None
+        self._logged_cached_text_embeddings = False
+        self._logged_text_embedding_diag = False
 
     # ================================================================
     # Internal properties
@@ -770,9 +782,35 @@ class WanBase(VideoBackbone):
         )
 
         batch_size = len(frames)
-        context, seq_lens = wan_encode.encode_text(
-            text, tokenizer=self._tokenizer, text_encoder=self.text_encoder, device=self.device
-        )
+        if self._text_embedding_cache is not None:
+            context, seq_lens = self._text_embedding_cache.load_batch(text, device=device, dtype=dtype)
+            if not self._logged_cached_text_embeddings:
+                logger.info("Using cached text embeddings; skipping Wan T5 encode: %s", self._text_embedding_cache.cache_dir)
+                self._logged_cached_text_embeddings = True
+        else:
+            text_encoder = getattr(self, "text_encoder", None)
+            if text_encoder is None:
+                raise RuntimeError(
+                    "Wan text_encoder is not loaded and no text embedding cache is configured. "
+                    "Set training.use_cached_text_embeddings=true with training.text_embedding_cache_dir, "
+                    "or set model.video_backbone.load_text_encoder=true."
+                )
+            context, seq_lens = wan_encode.encode_text(
+                text, tokenizer=self._tokenizer, text_encoder=text_encoder, device=self.device
+            )
+        if os.environ.get("OPENWAM_TEXT_EMBED_DIAG", "").strip().lower() in {"1", "true", "yes", "on"}:
+            if not self._logged_text_embedding_diag:
+                logger.info(
+                    "Wan text embedding diag: context.shape=%s context.dtype=%s context.device=%s "
+                    "seq_lens.shape=%s seq_lens.dtype=%s seq_lens=%s context_mask=None",
+                    tuple(context.shape),
+                    context.dtype,
+                    context.device,
+                    tuple(seq_lens.shape),
+                    seq_lens.dtype,
+                    seq_lens.detach().cpu().tolist(),
+                )
+                self._logged_text_embedding_diag = True
 
         all_input_videos = []
         for clip_frames in frames:
@@ -1049,11 +1087,25 @@ class Wan22Ti2v(WanBase):
     routing and aliases the encoder under ``"vae"``.
     """
 
-    def __init__(self, holder, *, external_encoder=None, shift_video=None, text_dim: Optional[int] = None):
+    def __init__(
+        self,
+        holder,
+        *,
+        external_encoder=None,
+        shift_video=None,
+        text_dim: Optional[int] = None,
+        text_embedding_cache_dir: Optional[str] = None,
+    ):
         """Internal constructor. Use ``from_pretrained()`` instead."""
         # Base sets self.video_encoder after nn.Module.__init__ (an nn.Module
         # encoder cannot be assigned before that), activating VAE-IO routing.
-        super().__init__(holder, external_encoder=external_encoder, shift_video=shift_video, text_dim=text_dim)
+        super().__init__(
+            holder,
+            external_encoder=external_encoder,
+            shift_video=shift_video,
+            text_dim=text_dim,
+            text_embedding_cache_dir=text_embedding_cache_dir,
+        )
         if external_encoder is not None:
             # Override the native (1,2,2)/4×/causal contract with the encoder's;
             # callers consult these attrs and never branch on the encoder.
@@ -1085,7 +1137,22 @@ class Wan22Ti2v(WanBase):
             external_encoder is not None and (is_deploy or not external_encoder.properties.pixel_decode)
         )
 
-        holder = loader.build_holder(source, skip_native_vae=skip_native_vae, **kw)
+        use_cached_text = loader.resolve_cfg_use_cached_text_embeddings(source)
+        cache_dir = loader.resolve_cfg_text_embedding_cache_dir(source)
+        load_text_encoder = loader.resolve_cfg_load_text_encoder(source)
+        if use_cached_text and not cache_dir:
+            raise ValueError("training.use_cached_text_embeddings=true requires training.text_embedding_cache_dir.")
+        if not load_text_encoder and not use_cached_text:
+            raise ValueError(
+                "model.video_backbone.load_text_encoder=false requires training.use_cached_text_embeddings=true."
+            )
+
+        holder = loader.build_holder(
+            source,
+            skip_native_vae=skip_native_vae,
+            skip_text_encoder=(not load_text_encoder),
+            **kw,
+        )
 
         if external_encoder is not None:
             # (3) Division factors from the encoder spec, not a hardcoded ``* 2`` / Wan-VAE grid, else
@@ -1118,7 +1185,13 @@ class Wan22Ti2v(WanBase):
         # because the cfg shape depends on the ``source`` type.
         shift_video_cfg = loader.resolve_cfg_shift_video(source)
 
-        return cls(holder, external_encoder=external_encoder, shift_video=shift_video_cfg, text_dim=text_dim)
+        return cls(
+            holder,
+            external_encoder=external_encoder,
+            shift_video=shift_video_cfg,
+            text_dim=text_dim,
+            text_embedding_cache_dir=str(cache_dir) if use_cached_text else None,
+        )
 
     # ================================================================
     # External-encoder-aware overrides

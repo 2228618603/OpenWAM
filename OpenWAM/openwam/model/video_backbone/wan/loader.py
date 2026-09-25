@@ -186,6 +186,7 @@ def build_holder_from_components(
     model_path: str = None,
     *,
     skip_native_vae: bool = False,
+    skip_text_encoder: bool = False,
 ):
     """Build an empty component holder from specs. Weights are NOT
     loaded here (``load_checkpoint`` does that). Tokenizer resolves
@@ -200,6 +201,8 @@ def build_holder_from_components(
 
     for entry in components:
         if skip_native_vae and entry.get("attr") == "vae":
+            continue
+        if skip_text_encoder and entry.get("attr") == "text_encoder":
             continue
         cls = _import_class(entry["model_class"])
         kwargs = entry.get("extra_kwargs", {}) or {}
@@ -247,7 +250,13 @@ def build_holder_from_components(
     return holder
 
 
-def build_holder_from_model_path(model_path: str, device: str = "cpu", *, skip_native_vae: bool = False):
+def build_holder_from_model_path(
+    model_path: str,
+    device: str = "cpu",
+    *,
+    skip_native_vae: bool = False,
+    skip_text_encoder: bool = False,
+):
     """Build a component holder from a model dir without full Hydra config.
     ``skip_native_vae`` drops the native VAE weight file before it
     materializes (irreversible external-encoder path).
@@ -260,6 +269,10 @@ def build_holder_from_model_path(model_path: str, device: str = "cpu", *, skip_n
     model_configs, tokenizer_config = discover_model_files(model_path)
     if skip_native_vae:
         model_configs = _filter_native_vae_configs(model_configs)
+    if skip_text_encoder:
+        from openwam.model.video_backbone.wan.pipeline_builder import _filter_text_encoder_configs
+
+        model_configs = _filter_text_encoder_configs(model_configs)
     return load_wan_components(
         model_configs,
         tokenizer_config,
@@ -268,7 +281,7 @@ def build_holder_from_model_path(model_path: str, device: str = "cpu", *, skip_n
     )
 
 
-def build_holder(source, *, skip_native_vae: bool = False, **kw):
+def build_holder(source, *, skip_native_vae: bool = False, skip_text_encoder: bool = False, **kw):
     """Resolve a ``from_pretrained`` source into a transient component holder.
 
     Sources: ``DictConfig`` (full Hydra cfg → pipeline builder), ``str`` dir
@@ -280,10 +293,15 @@ def build_holder(source, *, skip_native_vae: bool = False, **kw):
     if isinstance(source, DictConfig):
         from openwam.model.video_backbone.wan.pipeline_builder import build_training_pipeline
 
-        return build_training_pipeline(source, skip_native_vae=skip_native_vae)
+        return build_training_pipeline(source, skip_native_vae=skip_native_vae, skip_text_encoder=skip_text_encoder)
     if isinstance(source, str):
         if os.path.isdir(source):
-            return build_holder_from_model_path(source, device=kw.get("device", "cpu"), skip_native_vae=skip_native_vae)
+            return build_holder_from_model_path(
+                source,
+                device=kw.get("device", "cpu"),
+                skip_native_vae=skip_native_vae,
+                skip_text_encoder=skip_text_encoder,
+            )
         raise ValueError(f"from_pretrained(str) expects a directory path, got: {source!r}.")
     if isinstance(source, dict):
         vb_cfg = source.get("video_backbone", source)
@@ -295,11 +313,63 @@ def build_holder(source, *, skip_native_vae: bool = False, **kw):
                 ckpt_dir=kw.get("ckpt_dir"),
                 model_path=vb_cfg.get("model_path"),
                 skip_native_vae=skip_native_vae,
+                skip_text_encoder=skip_text_encoder,
             )
         model_path = vb_cfg.get("model_path") if isinstance(vb_cfg, dict) else getattr(vb_cfg, "model_path", None)
         if model_path is None:
             raise ValueError("dict source must contain 'video_backbone.components' or 'video_backbone.model_path'")
         return build_holder_from_model_path(
-            str(model_path), device=kw.get("device", "cpu"), skip_native_vae=skip_native_vae
+            str(model_path),
+            device=kw.get("device", "cpu"),
+            skip_native_vae=skip_native_vae,
+            skip_text_encoder=skip_text_encoder,
         )
     return source
+
+
+def _source_vb_cfg(source):
+    from omegaconf import DictConfig, OmegaConf
+
+    if isinstance(source, DictConfig):
+        return OmegaConf.select(source, "model.video_backbone", default=None) or OmegaConf.select(
+            source, "video_backbone", default=None
+        )
+    if isinstance(source, dict):
+        return source.get("video_backbone", source)
+    return None
+
+
+def _cfg_get(vb_cfg, key, default=None):
+    if vb_cfg is None:
+        return default
+    if isinstance(vb_cfg, dict):
+        return vb_cfg.get(key, default)
+    return getattr(vb_cfg, key, default)
+
+
+def resolve_cfg_text_embedding_cache_dir(source):
+    from omegaconf import DictConfig, OmegaConf
+
+    if isinstance(source, DictConfig):
+        return OmegaConf.select(source, "training.text_embedding_cache_dir", default=None) or _cfg_get(
+            _source_vb_cfg(source), "text_embedding_cache_dir", None
+        )
+    vb_cfg = _source_vb_cfg(source)
+    return _cfg_get(vb_cfg, "text_embedding_cache_dir", None)
+
+
+def resolve_cfg_use_cached_text_embeddings(source) -> bool:
+    from omegaconf import DictConfig, OmegaConf
+
+    if isinstance(source, DictConfig):
+        training_value = OmegaConf.select(source, "training.use_cached_text_embeddings", default=None)
+        if training_value is not None:
+            return bool(training_value)
+        return bool(_cfg_get(_source_vb_cfg(source), "use_cached_text_embeddings", False))
+    vb_cfg = _source_vb_cfg(source)
+    return bool(_cfg_get(vb_cfg, "use_cached_text_embeddings", False))
+
+
+def resolve_cfg_load_text_encoder(source) -> bool:
+    vb_cfg = _source_vb_cfg(source)
+    return bool(_cfg_get(vb_cfg, "load_text_encoder", True))
