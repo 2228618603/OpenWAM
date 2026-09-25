@@ -10,7 +10,8 @@ from pathlib import Path
 from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
 
-OPENWAM_PROJECT_ROOT = Path("/home/chw/code/packages/OpenWAM/OpenWAM")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OPENWAM_PROJECT_ROOT = REPO_ROOT / "OpenWAM"
 LOCAL_CODE_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(OPENWAM_PROJECT_ROOT))
 sys.path.insert(0, str(LOCAL_CODE_ROOT))

@@ -17,6 +17,8 @@ from omegaconf import OmegaConf
 
 _ORIGINAL_GLOB = _stdlib_glob.glob
 _INSTALLED = False
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_CODE_ROOT = Path(__file__).resolve().parent
 
 TRAIN_TASKS_40 = [
     "beat_block_hammer",
@@ -153,16 +155,18 @@ def apply_train40_45eps_config(cfg) -> None:
     if not dataset_dir:
         raise ValueError("cfg.dataloader.dataset_dir is required")
 
-    split_root = "/home/chw/code/packages/OpenWAM/train-on-robotwin/code/splits/wm_action_v1"
+    split_root = LOCAL_CODE_ROOT / "splits" / "wm_action_v1"
     stats_path = (
-        "/home/chw/code/packages/OpenWAM/train-on-robotwin/code/stats/wm_action_v1/"
-        "train40_45eps_robotwin_clean_50_normalization_stats.npy"
+        LOCAL_CODE_ROOT
+        / "stats"
+        / "wm_action_v1"
+        / "train40_45eps_robotwin_clean_50_normalization_stats.npy"
     )
     write_split_files(split_root)
 
     OmegaConf.update(cfg, "dataloader.tasks", list(TRAIN_TASKS_40), force_add=True)
     OmegaConf.update(cfg, "dataloader.episode_filter", "0-44", force_add=True)
-    OmegaConf.update(cfg, "dataloader.normalization_stats_path", stats_path, force_add=True)
+    OmegaConf.update(cfg, "dataloader.normalization_stats_path", str(stats_path), force_add=True)
     OmegaConf.update(cfg, "experiment_split.name", "wm_action_v1_train40_45eps", force_add=True)
     OmegaConf.update(cfg, "experiment_split.ood_tasks", list(OOD_TASKS_10), force_add=True)
 

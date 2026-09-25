@@ -4,7 +4,11 @@ set -euo pipefail
 source /home/chw/miniconda3/etc/profile.d/conda.sh
 conda activate openwam
 
-cd /home/chw/code/packages/OpenWAM/OpenWAM
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+OPENWAM_PROJECT_ROOT="${REPO_ROOT}/OpenWAM"
+
+cd "${OPENWAM_PROJECT_ROOT}"
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 export NPROC_PER_NODE=4
@@ -35,18 +39,18 @@ COMMON_ARGS=(
 )
 
 echo "[$(date -Is)] starting Action-only / No-WM formal training"
-ROBOTWIN_SPLIT_RANK_LOG_DIR=/home/chw/code/packages/OpenWAM/train-on-robotwin/code/audit/rank_logs/formal_action_only_no_wm_50k_${RUN_STAMP} \
+ROBOTWIN_SPLIT_RANK_LOG_DIR="${REPO_ROOT}/train-on-robotwin/code/audit/rank_logs/formal_action_only_no_wm_50k_${RUN_STAMP}" \
 MASTER_PORT=29620 \
-bash /home/chw/code/packages/OpenWAM/train-on-robotwin/code/train_robotwin_split.sh \
+bash "${SCRIPT_DIR}/train_robotwin_split.sh" \
   "${COMMON_ARGS[@]}" \
   training.lambda_video=0.0 \
   training.output_path=/mnt/data/chw/model/wm-function/robotwin_clean40_action_only_no_wm_50k \
   project.wandb.run_name=robotwin_clean40_action_only_no_wm_50k
 
 echo "[$(date -Is)] starting WM formal training"
-ROBOTWIN_SPLIT_RANK_LOG_DIR=/home/chw/code/packages/OpenWAM/train-on-robotwin/code/audit/rank_logs/formal_wm_50k_${RUN_STAMP} \
+ROBOTWIN_SPLIT_RANK_LOG_DIR="${REPO_ROOT}/train-on-robotwin/code/audit/rank_logs/formal_wm_50k_${RUN_STAMP}" \
 MASTER_PORT=29621 \
-bash /home/chw/code/packages/OpenWAM/train-on-robotwin/code/train_robotwin_split.sh \
+bash "${SCRIPT_DIR}/train_robotwin_split.sh" \
   "${COMMON_ARGS[@]}" \
   training.lambda_video=1.0 \
   training.output_path=/mnt/data/chw/model/wm-function/robotwin_clean40_wm_50k \

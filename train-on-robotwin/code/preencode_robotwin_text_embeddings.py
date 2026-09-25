@@ -17,7 +17,8 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 
-OPENWAM_PROJECT_ROOT = Path("/home/chw/code/packages/OpenWAM/OpenWAM")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OPENWAM_PROJECT_ROOT = REPO_ROOT / "OpenWAM"
 LOCAL_CODE_ROOT = Path(__file__).resolve().parent
 DEFAULT_CACHE_DIR = Path(
     "/mnt/data/chw/model/wm-function/cache/robotwin_text_embeddings/"
