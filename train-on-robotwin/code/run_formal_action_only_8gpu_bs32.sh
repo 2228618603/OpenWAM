@@ -27,8 +27,14 @@ export OPENWAM_DISTRIBUTED_TIMEOUT_SEC="${OPENWAM_DISTRIBUTED_TIMEOUT_SEC:-1800}
 export OPENWAM_STEP_DIAG="${OPENWAM_STEP_DIAG:-1}"
 export OPENWAM_STEP_DIAG_EVERY="${OPENWAM_STEP_DIAG_EVERY:-10}"
 TEXT_EMBED_CACHE_DIR="${TEXT_EMBED_CACHE_DIR:-/mnt/data/chw/model/wm-function/cache/robotwin_text_embeddings/wan22_ti2v_5b_umt5_xxl_bf16_clean50}"
-unset PYTORCH_CUDA_ALLOC_CONF
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 RUN_STAMP="$(date +%Y%m%d_%H%M%S)"
+TRAIN_RUN_ROOT="${TRAIN_RUN_ROOT:-/mnt/data/chw/model/openwam_train_runs}"
+TRAIN_OUTPUT_PATH="${TRAIN_OUTPUT_PATH:-${TRAIN_RUN_ROOT}/robotwin_clean40_action_only_no_wm_50k_8gpu_bs1_accum4_cached_t5_cpuoffload_noforeach}"
+
+if [[ -n "${WANDB_API_KEY:-}" ]]; then
+  wandb login "${WANDB_API_KEY}"
+fi
 
 COMMON_ARGS=(
   dataloader=robotwin
@@ -41,12 +47,17 @@ COMMON_ARGS=(
   model.video_backbone.use_cached_text_embeddings=true
   model.video_backbone.text_embedding_cache_dir="${TEXT_EMBED_CACHE_DIR}"
   model.architecture.variant=joint_self_attn
-  model.architecture.attention_mask_mode=mutual
+  model.architecture.attention_mask_mode=action_sees_video
   training.debug=false
-  training.batch_size=2
-  training.gradient_accumulation_steps=1
+  training.batch_size=1
+  training.gradient_accumulation_steps=4
   training.max_steps=50000
   training.num_epochs=null
+  training.zero_stage=2
+  training.offload_optimizer_device=cpu
+  +training.adamw_foreach=false
+  +training.freeze_video_backbone=true
+  +training.skip_zero_weight_video_loss=true
   training.save_steps=5000
   training.keep_last_k_ckpts=5
   training.dataset_num_workers=0
@@ -57,14 +68,14 @@ COMMON_ARGS=(
   project.seed=42
 )
 
-echo "[$(date -Is)] starting Action-only / No-WM formal training (8 GPUs, per-GPU bs=2, global bs=16)"
+echo "[$(date -Is)] starting Action-only / No-WM formal training (8 GPUs, per-GPU bs=1, grad_accum=4, effective global bs=32, optimizer CPU offload, AdamW foreach disabled)"
 ROBOTWIN_SPLIT_RANK_LOG_DIR="${REPO_ROOT}/train-on-robotwin/code/audit/rank_logs/formal_action_only_no_wm_50k_8gpu_${RUN_STAMP}" \
 ROBOTWIN_SPLIT_ERROR_DIR="${REPO_ROOT}/train-on-robotwin/code/audit/error_logs/formal_action_only_no_wm_50k_8gpu_${RUN_STAMP}" \
 MASTER_PORT=29630 \
 bash "${SCRIPT_DIR}/train_robotwin_split.sh" \
   "${COMMON_ARGS[@]}" \
   training.lambda_video=0.0 \
-  training.output_path=/mnt/data/chw/model/wm-function/robotwin_clean40_action_only_no_wm_50k \
-  project.wandb.run_name=robotwin_clean40_action_only_no_wm_50k_8gpu_bs32
+  training.output_path="${TRAIN_OUTPUT_PATH}" \
+  project.wandb.run_name=robotwin_clean40_action_only_no_wm_50k_8gpu_bs1_accum4_cached_t5_cpuoffload_noforeach
 
 echo "[$(date -Is)] Action-only / No-WM formal training finished"

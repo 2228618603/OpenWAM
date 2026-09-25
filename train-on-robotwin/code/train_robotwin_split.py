@@ -27,6 +27,12 @@ sys.path.insert(0, str(LOCAL_CODE_ROOT))
 faulthandler.enable(file=sys.stderr, all_threads=True)
 
 
+def _str_to_bool(value) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
 def _force_flush_excepthook(exc_type, exc_value, exc_tb):
     rank = os.environ.get("RANK", os.environ.get("LOCAL_RANK", "?"))
     sys.stderr.write(f"\n===== UNHANDLED EXCEPTION ON RANK {rank} =====\n")
@@ -203,6 +209,8 @@ def _build_accelerator(cfg: DictConfig):
         gradient_accumulation_steps=grad_accum,
         gradient_clipping=float(max_grad_norm) if max_grad_norm else 0.0,
         offload_optimizer_device=str(t.offload_optimizer_device),
+        offload_param_device=str(OmegaConf.select(cfg, "training.offload_param_device", default="none")),
+        zero3_init_flag=_str_to_bool(OmegaConf.select(cfg, "training.zero3_init_flag", default=False)),
     )
     return accelerate.Accelerator(
         gradient_accumulation_steps=grad_accum,
@@ -222,8 +230,10 @@ def _train_openwam(cfg: DictConfig) -> None:
     from openwam.dataloader.registry import build_dataset
     from openwam.train.openwam_trainer import OpenWAMTrainer
     from openwam.train.utils.seeding import seed_everything
+    from robotwin_oom_patches import install_robotwin_memory_patches
 
     _inject_project_seed(cfg)
+    install_robotwin_memory_patches(cfg)
 
     project_seed = OmegaConf.select(cfg, "project.seed", default=None)
     if project_seed is not None:
