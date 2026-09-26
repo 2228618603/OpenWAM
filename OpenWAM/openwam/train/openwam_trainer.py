@@ -22,6 +22,7 @@ Usage:
 """
 
 import itertools
+import gc
 import logging
 import math
 import os
@@ -81,6 +82,98 @@ def _value_summary(value, depth: int = 0) -> str:
         extra = ", ..." if len(value) > len(items) else ""
         return f"{type(value).__name__}([" + body + extra + "])"
     return repr(value)
+
+
+def _optimizer_state_summary(optimizer) -> str:
+    state_sources = []
+    seen_optimizers = set()
+    current = optimizer
+    while current is not None and id(current) not in seen_optimizers:
+        seen_optimizers.add(id(current))
+        state = getattr(current, "state", None)
+        if isinstance(state, dict):
+            state_sources.append((type(current).__name__, state))
+        current = getattr(current, "optimizer", None)
+
+    def collect_tensor_bytes(value) -> tuple[int, int]:
+        tensor_count = 0
+        total_bytes = 0
+        seen_tensors = set()
+
+        def visit(item):
+            nonlocal tensor_count, total_bytes
+            if torch.is_tensor(item):
+                key = (item.device.type, item.device.index, item.data_ptr(), item.numel(), item.element_size())
+                if key in seen_tensors:
+                    return
+                seen_tensors.add(key)
+                tensor_count += 1
+                total_bytes += item.numel() * item.element_size()
+                return
+            if isinstance(item, dict):
+                for child in item.values():
+                    visit(child)
+                return
+            if isinstance(item, (list, tuple)):
+                for child in item:
+                    visit(child)
+
+        visit(value)
+        return tensor_count, total_bytes
+
+    state_entries = 0
+    state_tensors = 0
+    state_bytes = 0
+    for _, state in state_sources:
+        state_entries += len(state)
+        tensors, bytes_ = collect_tensor_bytes(state)
+        state_tensors += tensors
+        state_bytes += bytes_
+
+    attr_rows = []
+    current = optimizer
+    seen_optimizers.clear()
+    while current is not None and id(current) not in seen_optimizers:
+        seen_optimizers.add(id(current))
+        for attr_name, attr_value in getattr(current, "__dict__", {}).items():
+            if attr_name in {"state", "param_groups", "optimizer"}:
+                continue
+            tensors, bytes_ = collect_tensor_bytes(attr_value)
+            if bytes_:
+                attr_rows.append((bytes_, tensors, f"{type(current).__name__}.{attr_name}"))
+        current = getattr(current, "optimizer", None)
+    attr_rows.sort(reverse=True)
+    top_attrs = ",".join(
+        f"{name}:{bytes_ / (1024**3):.2f}GiB/{tensors}" for bytes_, tensors, name in attr_rows[:6]
+    )
+    names = "/".join(name for name, _ in state_sources) or type(optimizer).__name__
+    return (
+        f"opt={names} opt_state_entries={state_entries} opt_state_tensors={state_tensors} "
+        f"opt_state_bytes={state_bytes / (1024**3):.2f}GiB opt_top_attrs={top_attrs}"
+    )
+
+
+def _cuda_tensor_summary_for_current_device(limit: int = 6) -> str:
+    if not torch.cuda.is_available():
+        return "cuda_tensor_diag=unavailable"
+    device = torch.cuda.current_device()
+    rows: dict[tuple, list[int]] = {}
+    for obj in gc.get_objects():
+        try:
+            if not torch.is_tensor(obj) or not obj.is_cuda or obj.device.index != device:
+                continue
+            key = (tuple(obj.shape), str(obj.dtype), bool(obj.requires_grad))
+            item = rows.setdefault(key, [0, 0])
+            item[0] += 1
+            item[1] += obj.numel() * obj.element_size()
+        except Exception:
+            continue
+    top = sorted(((bytes_, count, key) for key, (count, bytes_) in rows.items()), reverse=True)[:limit]
+    body = ",".join(
+        f"{shape}/{dtype}/grad={requires_grad}:{bytes_ / (1024**3):.2f}GiB/{count}"
+        for bytes_, count, (shape, dtype, requires_grad) in top
+    )
+    return f"cuda_tensor_top={body}"
 
 
 class OpenWAMTrainer:
@@ -192,6 +285,13 @@ class OpenWAMTrainer:
         self.lambda_action = float(t.lambda_action)
         self._step_diag_enabled = _diag_bool_env("OPENWAM_STEP_DIAG")
         self._step_diag_every = max(1, int(os.environ.get("OPENWAM_STEP_DIAG_EVERY", "10")))
+        self._phase_diag_enabled = _diag_bool_env("OPENWAM_PHASE_DIAG")
+        self._step_diag_sync = _diag_bool_env("OPENWAM_STEP_DIAG_SYNC")
+        self._force_step_gc = _diag_bool_env("OPENWAM_FORCE_STEP_GC")
+        self._grad_diag_enabled = _diag_bool_env("OPENWAM_GRAD_DIAG")
+        self._opt_diag_enabled = _diag_bool_env("OPENWAM_OPT_DIAG")
+        self._tensor_diag_enabled = _diag_bool_env("OPENWAM_TENSOR_DIAG")
+        self._active_optimizer = None
 
         # Push forward-time training flags onto the architecture so prepare_inputs
         # is self-contained.
@@ -211,6 +311,8 @@ class OpenWAMTrainer:
         if not torch.cuda.is_available():
             return "cuda=unavailable"
         device = torch.cuda.current_device()
+        if getattr(self, "_step_diag_sync", False):
+            torch.cuda.synchronize(device)
         allocated = torch.cuda.memory_allocated(device) / (1024**3)
         reserved = torch.cuda.memory_reserved(device) / (1024**3)
         max_allocated = torch.cuda.max_memory_allocated(device) / (1024**3)
@@ -223,7 +325,9 @@ class OpenWAMTrainer:
     def _emit_step_diag(self, *, step: int, phase: str, batch=None, exc: BaseException | None = None) -> None:
         if not self._step_diag_enabled and exc is None:
             return
-        should_log = exc is not None or step <= 5 or step % self._step_diag_every == 0
+        is_boundary_step = step <= 5 or step % self._step_diag_every == 0
+        is_phase_detail = self._phase_diag_enabled and phase not in {"step_start", "step_done"}
+        should_log = exc is not None or is_boundary_step or is_phase_detail
         if not should_log:
             return
         rank = os.environ.get("RANK", "?")
@@ -232,6 +336,30 @@ class OpenWAMTrainer:
             f"[openwam_step_diag] rank={rank} local_rank={local_rank} pid={os.getpid()} "
             f"step={step} phase={phase} {self._cuda_diag()}"
         )
+        if self._grad_diag_enabled:
+            grad_tensors = 0
+            grad_bytes = 0
+            try:
+                for param in self.architecture.parameters():
+                    grad = param.grad
+                    if grad is None:
+                        continue
+                    grad_tensors += 1
+                    grad_bytes += grad.numel() * grad.element_size()
+            except Exception:
+                grad_tensors = -1
+                grad_bytes = 0
+            message += f" grad_tensors={grad_tensors} grad_bytes={grad_bytes / (1024**3):.2f}GiB"
+        if self._opt_diag_enabled and self._active_optimizer is not None:
+            try:
+                message += " " + _optimizer_state_summary(self._active_optimizer)
+            except Exception as opt_exc:
+                message += f" opt_diag_error={type(opt_exc).__name__}:{opt_exc}"
+        if self._tensor_diag_enabled:
+            try:
+                message += " " + _cuda_tensor_summary_for_current_device()
+            except Exception as tensor_exc:
+                message += f" tensor_diag_error={type(tensor_exc).__name__}:{tensor_exc}"
         sys.stderr.write(message + "\n")
         sys.stderr.flush()
         if batch is not None and (exc is not None or step <= 5):
@@ -310,6 +438,7 @@ class OpenWAMTrainer:
 
         output_path, resume_state_dir = self.setup_output_dir(debug, resume_path)
         optimizer, dataloader, scheduler = self.prepare_accelerate(optimizer, dataloader, scheduler)
+        self._active_optimizer = optimizer
 
         if self._run_seed is not None:
             from openwam.dataloader.mixture import MixtureDataset
@@ -323,6 +452,7 @@ class OpenWAMTrainer:
                 wire_sampler_seed(dataloader, int(self._run_seed), rank=self._rank)
 
         all_params = [p for group in optimizer.param_groups for p in group["params"]]
+        optimizer.zero_grad(set_to_none=True)
 
         is_main = self.accelerator is None or self.accelerator.is_main_process
         wandb_run = None if (debug or not is_main) else init_wandb(self.cfg)
@@ -399,12 +529,15 @@ class OpenWAMTrainer:
                         torch.manual_seed(step_seed)
                         if torch.cuda.is_available():
                             torch.cuda.manual_seed_all(step_seed)
+                    self._emit_step_diag(step=step_for_diag, phase="after_seed")
                     with self.accelerator.accumulate(self.architecture):
                         phase = "compute_loss"
                         losses = self.compute_loss(batch)
                         loss = losses["total"]
+                        self._emit_step_diag(step=step_for_diag, phase="after_compute_loss")
                         phase = "backward"
                         self.accelerator.backward(loss)
+                        self._emit_step_diag(step=step_for_diag, phase="after_backward")
 
                         grad_norm = torch.tensor(0.0, device=loss.device)
                         if self.accelerator.sync_gradients:
@@ -412,19 +545,24 @@ class OpenWAMTrainer:
                             if max_grad_norm is not None:
                                 grad_norm_val = self.accelerator.clip_grad_norm_(all_params, max_grad_norm)
                                 grad_norm = torch.tensor(float(grad_norm_val), device=loss.device)
+                            self._emit_step_diag(step=step_for_diag, phase="after_clip_grad_norm")
                             phase = "optimizer_step"
                             optimizer.step()
+                            self._emit_step_diag(step=step_for_diag, phase="after_optimizer_step")
                             if scheduler is not None:
                                 phase = "scheduler_step"
                                 scheduler.step()
+                                self._emit_step_diag(step=step_for_diag, phase="after_scheduler_step")
                             phase = "optimizer_zero_grad"
-                            optimizer.zero_grad()
+                            optimizer.zero_grad(set_to_none=True)
+                            self._emit_step_diag(step=step_for_diag, phase="after_optimizer_zero_grad")
                             opt_step += 1
 
                     global_step += 1
 
                     phase = "reduce_step_metrics"
                     metrics = reduce_step_metrics(self.accelerator, losses, grad_norm)
+                    self._emit_step_diag(step=global_step, phase="after_reduce_step_metrics")
                     self._emit_step_diag(step=global_step, phase="step_done")
                 except BaseException as exc:
                     self._emit_step_diag(step=step_for_diag, phase=f"EXCEPTION:{phase}", batch=batch, exc=exc)
@@ -458,6 +596,13 @@ class OpenWAMTrainer:
                     if is_main:
                         manage_checkpoints(output_path, keep_last_k)
 
+                del metrics, losses, loss, grad_norm, batch
+                if self._force_step_gc:
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                self._emit_step_diag(step=global_step, phase="after_step_cleanup")
+
                 if max_steps and global_step >= max_steps:
                     pbar.close()
                     self.finish_training(output_path, global_step, save_steps, keep_last_k, is_main, wandb_run)
@@ -476,7 +621,16 @@ class OpenWAMTrainer:
             video_lr=float(t.video_lr) if getattr(t, "video_lr", None) else None,
         )
         betas = tuple(getattr(t, "adam_betas", [0.9, 0.95]))
-        return torch.optim.AdamW(params, lr=float(t.learning_rate), weight_decay=float(t.weight_decay), betas=betas)
+        # The foreach AdamW CUDA path creates large temporary tensor lists during
+        # optimizer.step(). With ZeRO-2 and ~6B trainable params this can add a
+        # multi-GB peak on top of already-sharded optimizer state.
+        return torch.optim.AdamW(
+            params,
+            lr=float(t.learning_rate),
+            weight_decay=float(t.weight_decay),
+            betas=betas,
+            foreach=False,
+        )
 
     # (4) Called by train() — build the training DataLoader (seeded generator when reproducible).
     def build_dataloader(self, batch_size: int) -> torch.utils.data.DataLoader:
@@ -686,6 +840,21 @@ class OpenWAMTrainer:
         loss_total = metrics["loss_total"]
         loss_video = metrics["loss_video"]
         grad_norm = metrics["grad_norm"]
+        remaining = None
+        if pbar is not None and getattr(pbar, "total", None):
+            remaining_steps = max(int(pbar.total) - int(global_step), 0)
+            if steps_per_sec > 0:
+                remaining = remaining_steps / steps_per_sec
+
+        def _fmt_eta(seconds):
+            if seconds is None:
+                return "n/a"
+            seconds = int(max(seconds, 0))
+            hours, rem = divmod(seconds, 3600)
+            minutes, secs = divmod(rem, 60)
+            if hours:
+                return f"{hours:d}h{minutes:02d}m{secs:02d}s"
+            return f"{minutes:d}m{secs:02d}s"
 
         if pbar is not None:
             postfix = {"loss": f"{loss_total:.4f}", "video": f"{loss_video:.4f}"}
@@ -693,6 +862,7 @@ class OpenWAMTrainer:
                 postfix[name] = f"{metrics[key]:.4f}"
             postfix["lr"] = f"{lr:.2e}"
             postfix["epoch"] = epoch
+            postfix["eta"] = _fmt_eta(remaining)
             pbar.set_postfix(postfix)
             pbar.update(1)
 
@@ -710,17 +880,30 @@ class OpenWAMTrainer:
                 log_dict[f"train/loss_{name}"] = metrics[key]
             wandb_run.log(log_dict, step=global_step)
 
+        is_main = self.accelerator is None or self.accelerator.is_main_process
+        loss_parts = " ".join(f"{name}={metrics[key]:.6f}" for name, key in labels)
+        log_every = max(1, int(os.environ.get("OPENWAM_TRAIN_LOG_EVERY", "50")))
+        if is_main and not debug and global_step % log_every == 0:
+            msg = (
+                f"[train][step {global_step:06d} opt {opt_step:06d}] "
+                f"loss={loss_total:.6f} video={loss_video:.6f} {loss_parts} "
+                f"grad_norm={grad_norm:.6f} lr={lr:.3e} epoch={epoch} "
+                f"steps_per_sec={steps_per_sec:.3f} eta={_fmt_eta(remaining)}"
+            )
+            if pbar is not None:
+                pbar.write(msg)
+            else:
+                print(msg, flush=True)
+
         if not debug:
             return
-        is_main = self.accelerator is None or self.accelerator.is_main_process
         if not is_main:
             return
-        loss_parts = " ".join(f"{name}={metrics[key]:.6f}" for name, key in labels)
         msg = (
             f"[debug][step {global_step:04d} opt {opt_step:04d}] "
             f"loss={loss_total:.6f} video={loss_video:.6f} {loss_parts} "
             f"grad_norm={grad_norm:.6f} lr={lr:.3e} epoch={epoch} "
-            f"steps_per_sec={steps_per_sec:.3f}"
+            f"steps_per_sec={steps_per_sec:.3f} eta={_fmt_eta(remaining)}"
         )
         logger.info(msg)
         if pbar is not None:

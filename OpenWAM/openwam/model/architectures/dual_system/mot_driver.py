@@ -13,6 +13,7 @@ The driver owns no parameters — a plain Python class, absent from ``state_dict
 from __future__ import annotations
 
 import copy
+import os
 from typing import TYPE_CHECKING, Optional, Tuple
 
 import torch
@@ -174,15 +175,21 @@ class DualSystemMoTDriver:
         :meth:`run_joint_loop`. When ``None``, the driver falls back to
         per-step construction (used by direct ``step()`` callers in tests).
 
-        When ``use_gradient_checkpointing`` is enabled (and the action
-        backbone is in training mode), the entire pre→mixed→post triplet
-        runs under :func:`torch.utils.checkpoint.checkpoint`, mirroring
-        what the other architectures get from ``vb.run_block``. The inner
-        per-layer ``mot_checkpoint_mixed_attn`` is suppressed in that mode
-        to avoid nested-checkpoint waste — the outer wrapper already
-        recomputes mixed attention.
+        The driver deliberately does not use the old whole-layer
+        pre→mixed→post checkpoint by default. With DeepSpeed/ZeRO that
+        non-reentrant closure retained checkpoint/autograd state across
+        optimizer steps and caused CUDA allocated memory to grow steadily.
+        We keep the smaller mixed-attention checkpoint in ``_step_impl``; it
+        gives most of the useful activation relief without wrapping the
+        mutable backbone state objects.
         """
-        if use_gradient_checkpointing and self.ab.training:
+        allow_outer_checkpoint = os.environ.get("OPENWAM_MOT_OUTER_CHECKPOINT", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if use_gradient_checkpointing and self.ab.training and allow_outer_checkpoint:
             return self._step_checkpointed(
                 layer_id, vstate, astate, attn_mask=attn_mask, offload=use_gradient_checkpointing_offload
             )
@@ -293,11 +300,18 @@ class DualSystemMoTDriver:
         vx0 = vstate.hidden_states
         ax0 = outer_payload.x_action
 
+        use_reentrant = os.environ.get("OPENWAM_MOT_CHECKPOINT_REENTRANT", "0").strip().lower() not in {
+            "0",
+            "false",
+            "no",
+            "off",
+        }
+
         if offload:
             with torch.autograd.graph.save_on_cpu():
-                new_vx, new_ax = torch.utils.checkpoint.checkpoint(_run, vx0, ax0, use_reentrant=False)
+                new_vx, new_ax = torch.utils.checkpoint.checkpoint(_run, vx0, ax0, use_reentrant=use_reentrant)
         else:
-            new_vx, new_ax = torch.utils.checkpoint.checkpoint(_run, vx0, ax0, use_reentrant=False)
+            new_vx, new_ax = torch.utils.checkpoint.checkpoint(_run, vx0, ax0, use_reentrant=use_reentrant)
 
         vstate.hidden_states = new_vx
         outer_payload.x_action = new_ax
