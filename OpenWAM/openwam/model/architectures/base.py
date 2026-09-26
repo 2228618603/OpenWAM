@@ -668,13 +668,55 @@ class BaseWAMArchitecture(ABC, nn.Module):
         ``state_dict`` defaults to ``self.state_dict()`` (deploy export); the
         trainer passes a gathered state_dict (ZeRO/DDP all-gather) instead.
         """
+        import shutil
+        import tempfile
+
         from safetensors.torch import save_file
 
         if state_dict is None:
             state_dict = self.state_dict()
         state_dict = _exclude_vlm_from_state_dict(state_dict)
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        save_file(state_dict, path)
+        force_staging = os.environ.get("OPENWAM_FORCE_STAGED_CHECKPOINT", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if not force_staging:
+            try:
+                save_file(state_dict, path)
+                return
+            except Exception as exc:
+                msg = str(exc)
+                if "Operation not supported" not in msg and "os error 95" not in msg:
+                    raise
+
+                logger.warning(
+                    "Direct safetensors save failed for %s (%s); staging on a local filesystem first.",
+                    path,
+                    exc,
+                )
+
+        staging_dir = os.environ.get("OPENWAM_CHECKPOINT_STAGING_DIR") or tempfile.gettempdir()
+        os.makedirs(staging_dir, exist_ok=True)
+        staged_path = None
+        target_tmp = f"{path}.tmp"
+        try:
+            fd, staged_path = tempfile.mkstemp(
+                prefix=f".{os.path.basename(path)}.",
+                suffix=".tmp",
+                dir=staging_dir,
+            )
+            os.close(fd)
+            save_file(state_dict, staged_path)
+            shutil.copyfile(staged_path, target_tmp)
+            os.replace(target_tmp, path)
+        finally:
+            if staged_path and os.path.exists(staged_path):
+                os.remove(staged_path)
+            if os.path.exists(target_tmp):
+                os.remove(target_tmp)
 
     def load_checkpoint(self, path: str, strict: bool = True) -> None:
         """Load architecture state from a safetensors checkpoint.
